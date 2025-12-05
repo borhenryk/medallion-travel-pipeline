@@ -1,0 +1,50 @@
+# Databricks Asset Bundle Configuration
+# Medallion Architecture Data Engineering Pipeline
+
+bundle:
+  name: medallion_travel_pipeline
+
+variables:
+  catalog:
+    description: Unity Catalog name
+    default: dbdemos_henryk
+  source_schema:
+    description: Source schema containing raw data
+    default: dbdemos_fs_travel
+  target_schema:
+    description: Target schema for medallion tables
+    default: medallion_pipeline
+
+include:
+  - resources/*.yml
+
+targets:
+  dev:
+    mode: development
+    default: true
+    workspace:
+      host: https://e2-demo-field-eng.cloud.databricks.com
+    variables:
+      catalog: dbdemos_henryk
+      source_schema: dbdemos_fs_travel
+      target_schema: medallion_pipeline
+
+  staging:
+    workspace:
+      host: https://e2-demo-field-eng.cloud.databricks.com
+    variables:
+      catalog: dbdemos_henryk
+      source_schema: dbdemos_fs_travel
+      target_schema: medallion_pipeline_staging
+
+  prod:
+    mode: production
+    workspace:
+      host: https://e2-demo-field-eng.cloud.databricks.com
+    variables:
+      catalog: dbdemos_henryk
+      source_schema: dbdemos_fs_travel
+      target_schema: medallion_pipeline_prod
+    permissions:
+      - level: CAN_VIEW
+        group_name: users

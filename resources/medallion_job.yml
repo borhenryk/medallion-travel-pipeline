@@ -1,0 +1,66 @@
+# Medallion Pipeline Job Definition
+# Orchestrates Bronze -> Silver -> Gold data transformations
+
+resources:
+  jobs:
+    medallion_pipeline_job:
+      name: "[${bundle.target}] Medallion Travel Pipeline"
+      description: "Data engineering pipeline using Medallion Architecture for travel analytics"
+      
+      schedule:
+        quartz_cron_expression: "0 0 6 * * ?"  # Daily at 6 AM UTC
+        timezone_id: "UTC"
+        pause_status: PAUSED
+      
+      email_notifications:
+        on_failure:
+          - ${workspace.current_user.userName}
+      
+      tags:
+        pipeline: medallion
+        domain: travel_analytics
+        environment: ${bundle.target}
+      
+      tasks:
+        - task_key: bronze_layer
+          description: "Ingest raw data into Bronze layer"
+          notebook_task:
+            notebook_path: ../src/medallion_pipeline/01_bronze_ingestion.py
+            base_parameters:
+              catalog: ${var.catalog}
+              source_schema: ${var.source_schema}
+              target_schema: ${var.target_schema}
+            source: WORKSPACE
+          
+        - task_key: silver_layer
+          description: "Clean and standardize data in Silver layer"
+          depends_on:
+            - task_key: bronze_layer
+          notebook_task:
+            notebook_path: ../src/medallion_pipeline/02_silver_transformations.py
+            base_parameters:
+              catalog: ${var.catalog}
+              target_schema: ${var.target_schema}
+            source: WORKSPACE
+          
+        - task_key: gold_layer
+          description: "Aggregate data for Gold layer analytics"
+          depends_on:
+            - task_key: silver_layer
+          notebook_task:
+            notebook_path: ../src/medallion_pipeline/03_gold_aggregations.py
+            base_parameters:
+              catalog: ${var.catalog}
+              target_schema: ${var.target_schema}
+            source: WORKSPACE
+          
+        - task_key: data_quality_check
+          description: "Validate data quality across all layers"
+          depends_on:
+            - task_key: gold_layer
+          notebook_task:
+            notebook_path: ../src/medallion_pipeline/04_data_quality.py
+            base_parameters:
+              catalog: ${var.catalog}
+              target_schema: ${var.target_schema}
+            source: WORKSPACE
